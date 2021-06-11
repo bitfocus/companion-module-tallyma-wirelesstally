@@ -25,5 +25,6 @@ https://github.com/bitfocus/companion-module-tallyma-wirelesstally/issues
 * Call feature for operators (only in Tally Version 2.2.3)
 * Set Brightness Levels
 * Reset Tally Config
+* Presets for quicker and easier setup of your layout in Companion
 
 See [HELP.md](./HELP.md) and [LICENSE](./LICENSE)
