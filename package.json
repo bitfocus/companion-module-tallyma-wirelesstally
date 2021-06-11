@@ -1,0 +1,32 @@
+{
+    "name": "companion-module-tallyma-wirelesstally",
+    "version": "1.0.0",
+    "description": "Module to control the Tally-MA Wireless Tally",
+    "keywords": [
+        "wireless",
+        "tally",
+        "tally-ma"
+    ],
+    "manufacturer": "Tally-MA",
+    "product": "Wireless-Tally",
+    "shortname": "Wireless-Tally",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+ssh://git@github.com/bitfocus/companion-module-tallyma-wirelesstally.git"
+    },
+    "author": "João Lima",
+    "contributors": [
+        "Andreas H. Thomsen <mc-hauge@hotmail.com>",
+        "Andrew Broughton <andy@checkcheckonetwo.com>",
+        "John A Knight Jr <istnv@ayesti.com>"
+    ],
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/bitfocus/companion-module-tallyma-wirelesstally/issues"
+    },
+    "homepage": "https://github.com/bitfocus/companion-module-tallyma-wirelesstally#readme"
+}
