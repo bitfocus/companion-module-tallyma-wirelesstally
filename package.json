@@ -1,5 +1,5 @@
 {
-    "name": "companion-module-tallyma-wirelesstally",
+    "name": "tallyma-wirelesstally",
     "version": "1.0.0",
     "description": "Module to control the Tally-MA Wireless Tally",
     "keywords": [
