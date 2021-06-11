@@ -2,7 +2,7 @@ var tcp = require('../../tcp');
 var udp = require('../../udp');
 var instance_skel = require('../../instance_skel');
 var ping = require('ping');
-
+//testing
 const HIGHRED = Buffer.from([2, 5, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0]);
 const HIGHGREEN = Buffer.from([2, 5, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0]);
 const HIGHNONE = Buffer.from([2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
