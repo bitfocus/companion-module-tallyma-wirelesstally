@@ -8,8 +8,8 @@
         "tally-ma"
     ],
     "manufacturer": "Tally-MA",
-    "product": "Wireless-Tally",
-    "shortname": "Wireless-Tally",
+    "product": "Wireless Tally",
+    "shortname": "Wireless Tally",
     "main": "index.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
