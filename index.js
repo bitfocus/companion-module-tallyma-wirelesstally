@@ -50,7 +50,7 @@ instance.prototype.searchAndConnect = function () {
 	self.status(
 		self.STATE_WARNING,
 		'Connecting'
-	)(async () => {
+	);(async () => {
 		let res = await ping.promise.probe(self.config.hostname)
 		if (res.numeric_host !== undefined) {
 			//console.log(res.host + " on IP address: " + res.numeric_host)
