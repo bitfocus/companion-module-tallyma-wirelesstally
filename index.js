@@ -48,54 +48,102 @@ instance.prototype.searchAndConnect = function() {
     var self = this
     self.debug('Not connected, searching...')
     self.status(self.STATE_WARNING, 'Connecting');
+    if (self.config.manualip === '') {
+        self.config.manualip = '0.0.0.0';
+    }
     (async() => {
-        let res = await ping.promise.probe(self.config.hostname)
-        if (res.numeric_host !== undefined) {
-            //console.log(res.host + " on IP address: " + res.numeric_host)
-            self.debug(res.host + ' on IP address: ' + res.numeric_host)
-            self.config.host = res.numeric_host
-            if (self.config.host !== undefined) {
-                self.udp = new udp(self.config.host, self.config.port)
-                self.udp.send(INIT)
-                self.sendBuf = HIGHNONE
-                self.status(self.STATE_OK)
-                clearTimeout(self.tallyConnectTimeout)
-                self.udp.on('error', function(err) {
-                    self.debug('Network error', err)
-                    self.status(self.STATE_ERROR, err)
-                    self.log('error', 'Network error: ' + err.message)
-                })
-
-                // If we get data, thing should be good
-                self.udp.on('data', function() {
+        if (self.config.manualip === '0.0.0.0') {
+            self.debug("Auto IP mode.");
+            let res = await ping.promise.probe(self.config.hostname)
+            if (res.numeric_host !== undefined) {
+                //console.log(res.host + " on IP address: " + res.numeric_host)
+                self.debug(res.host + ' on IP address: ' + res.numeric_host)
+                self.config.host = res.numeric_host
+                if (self.config.host !== undefined) {
+                    self.udp = new udp(self.config.host, self.config.port)
+                    self.udp.send(INIT)
+                    self.sendBuf = HIGHNONE
                     self.status(self.STATE_OK)
-                })
+                    clearTimeout(self.tallyConnectTimeout)
+                    self.udp.on('error', function(err) {
+                        self.debug('Network error', err)
+                        self.status(self.STATE_ERROR, err)
+                        self.log('error', 'Network error: ' + err.message)
+                    })
 
-                self.udp.on('status_change', function(status, message) {
-                    self.status(status, message)
-                })
+                    // If we get data, thing should be good
+                    self.udp.on('data', function() {
+                        self.status(self.STATE_OK)
+                    })
+
+                    self.udp.on('status_change', function(status, message) {
+                        self.status(status, message)
+                    })
+                }
+                //console.log(self.config.host);
             }
-            //console.log(self.config.host);
-        }
-        if (self.config.host !== undefined) {
-            let cmd = 'http://' + self.config.host + '/' + self.config.funnyMode
-            self.sendHttp(cmd)
-            cmd = 'http://' + self.config.host + '/' + self.config.brightness
-            self.sendHttp(cmd)
-            cmd = 'http://' + self.config.host + '/' + self.config.opOnlyMode
-            self.sendHttp(cmd)
-        }
-        if (self.config.host !== undefined) {
-            self.tallyUpdateTimer = setInterval(function() {
-                self.updateTallyInfo()
-            }, self.config.pooltime)
-            self.status(self.STATE_OK, 'Connected')
-        }
-        if (self.config.host === undefined) {
-            self.debug('Tally not found.')
-            setTimeout(function() {
-                self.searchAndConnect()
-            }, 5000)
+            if (self.config.host !== undefined) {
+                let cmd = 'http://' + self.config.host + '/' + self.config.funnyMode
+                self.sendHttp(cmd)
+                cmd = 'http://' + self.config.host + '/' + self.config.brightness
+                self.sendHttp(cmd)
+                cmd = 'http://' + self.config.host + '/' + self.config.opOnlyMode
+                self.sendHttp(cmd)
+            }
+            if (self.config.host !== undefined) {
+                self.tallyUpdateTimer = setInterval(function() {
+                    self.updateTallyInfo()
+                }, self.config.pooltime)
+                self.status(self.STATE_OK, 'Connected')
+            }
+            if (self.config.host === undefined) {
+                self.debug('Tally not found.')
+                setTimeout(function() {
+                    self.searchAndConnect()
+                }, 5000)
+            }
+        } else {
+            self.debug("Manual IP mode.");
+            self.config.host = self.config.manualip;
+            self.udp = new udp(self.config.host, self.config.port)
+            self.udp.send(INIT)
+            self.sendBuf = HIGHNONE
+            self.status(self.STATE_OK)
+            clearTimeout(self.tallyConnectTimeout)
+            self.udp.on('error', function(err) {
+                self.debug('Network error', err)
+                self.status(self.STATE_ERROR, err)
+                self.log('error', 'Network error: ' + err.message)
+            })
+
+            // If we get data, thing should be good
+            self.udp.on('data', function() {
+                self.status(self.STATE_OK)
+            })
+
+            self.udp.on('status_change', function(status, message) {
+                self.status(status, message)
+            })
+            if (self.config.host !== undefined) {
+                let cmd = 'http://' + self.config.host + '/' + self.config.funnyMode
+                self.sendHttp(cmd)
+                cmd = 'http://' + self.config.host + '/' + self.config.brightness
+                self.sendHttp(cmd)
+                cmd = 'http://' + self.config.host + '/' + self.config.opOnlyMode
+                self.sendHttp(cmd)
+            }
+            if (self.config.host !== undefined) {
+                self.tallyUpdateTimer = setInterval(function() {
+                    self.updateTallyInfo()
+                }, self.config.pooltime)
+                self.status(self.STATE_OK, 'Connected')
+            }
+            if (self.config.host === undefined) {
+                self.debug('Tally not found.')
+                setTimeout(function() {
+                    self.searchAndConnect()
+                }, 5000)
+            }
         }
     })()
 }
@@ -103,6 +151,7 @@ instance.prototype.searchAndConnect = function() {
 instance.prototype.updateConfig = function(config) {
     var self = this
     self.init_presets()
+
 
     if (self.udp !== undefined) {
         self.udp.destroy()
@@ -185,9 +234,11 @@ instance.prototype.config_fields = function() {
 						<br>
 						Guidelines:
 						<ul>
-							<li>Input the tally number that you wish to connect to. (IP will be scanned automatically)</li>
+							<li>Input the tally number that you wish to connect to. </li>
                             <li>Set the refresh rate. (100 ms recomended)</li>
-							<li>Choose who controls the tally. If "other" is selected (provided tally server for Atem/Vmix/General usage or any third party software) only auxiliar functions like call or setting color modes will work through Companion.</li>
+                            <li>If you wish to auto detect your Tally IP: leave the manual ip box at 0.0.0.0 .Otherwise specify your Tally IP address.</li>
+                            <li>If you want to switch from manual IP to auto IP: delete the manual IP address or input 0.0.0.0 </li>
+							<li>Choose who controls the tally. If "other" is selected (provided tally server for Atem/Vmix/OBS/Tricaster/General usage or any third party software) only auxiliar functions like call or setting color modes will work through Companion.</li>
 							<li>Choose any other option you want to default on your tally.</li>
 						</ul>
 					</div>
@@ -217,6 +268,14 @@ instance.prototype.config_fields = function() {
             label: 'Ip Address',
             //width: 6,
             value: self.config.host,
+            regex: self.REGEX_IP,
+        },
+        {
+            type: 'textinput',
+            id: 'manualip',
+            label: 'Manual Ip Address',
+            default: '0.0.0.0',
+            value: self.config.manualip,
             regex: self.REGEX_IP,
         },
         {
