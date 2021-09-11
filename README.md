@@ -13,6 +13,7 @@ https://github.com/bitfocus/companion-module-tallyma-wirelesstally/issues
 
 **Available commands in this module**
 
+* Auto tally IP detection or manual mode
 * Send PGM
 * Send PRV
 * Send Dark
