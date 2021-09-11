@@ -7,13 +7,14 @@ This module allows for a quicker setup of the Tally-MA Wireless Tally functions 
 If Companion is serving tally, you can use built-in Triggers or Variables to send tally info to your Tally-MA light.
 If using the normal tally servers, bypass the Companion server on the Instance Setup to "other" and you can continue to change Led Modes and colors.
 
+Auto tally IP detection is possible or also setting the IP address manually.
+
 Any issues or reports:
 https://github.com/bitfocus/companion-module-tallyma-wirelesstally/issues
 
 
 **Available commands in this module**
 
-* Auto tally IP detection or manual mode
 * Send PGM
 * Send PRV
 * Send Dark
