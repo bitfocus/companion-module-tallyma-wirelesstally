@@ -21,7 +21,7 @@ https://github.com/bitfocus/companion-module-tallyma-wirelesstally/issues
 * Send RECORDING (only in Tally Version 2.1.0 ->)
 * Setting Funny PGM Modes
 * Set operator LED only
-* Set talent LED only
+* Set talent LED only (only in Tally Version 2.2.6 ->)
 * Set full tally LED (only in Tally Version 2.2.3 ->)
 * Call feature for operators (only in Tally Version 2.2.3)
 * Set Brightness Levels
