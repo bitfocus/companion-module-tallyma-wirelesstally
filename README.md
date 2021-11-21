@@ -2,6 +2,8 @@
 
 ## Tally-MA Wireless Tally Module
 
+https://www.tally-ma.com
+
 This module allows for a quicker setup of the Tally-MA Wireless Tally functions with Companion, also allowing it to act as server or bystander but still allowing to control basic setup and color settings.
 
 If Companion is serving tally, you can use built-in Triggers or Variables to send tally info to your Tally-MA light.
