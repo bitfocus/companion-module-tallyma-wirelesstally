@@ -1,7 +1,8 @@
-//1.0.3
+//1.0.4
 var udp = require('../../udp')
 var instance_skel = require('../../instance_skel')
 var ping = require('ping')
+const mqtt = require('mqtt')
 
 const HIGHRED = Buffer.from([
     2, 5, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0,
@@ -26,8 +27,11 @@ function instance(system, id, config) {
     self.actions() // export actions
     self.init_presets()
     self.sendBuf = INIT
+    self.cloudMsg = INIT
+    self.mqttClient = INIT
     return self
 }
+
 
 instance.prototype.updateTallyInfo = function() {
     var self = this
@@ -48,105 +52,111 @@ instance.prototype.updateTallyInfo = function() {
 instance.prototype.searchAndConnect = function() {
     var self = this
     self.debug('Not connected, searching...')
-    self.status(self.STATE_WARNING, 'Connecting');
+    self.status(self.STATE_WARNING, 'Connecting')
     if (self.config.manualip === '') {
-        self.config.manualip = '0.0.0.0';
+        self.config.manualip = '0.0.0.0'
     }
-    (async() => {
-        if (self.config.manualip === '0.0.0.0') {
-            self.debug("Auto IP mode.");
-            let res = await ping.promise.probe(self.config.hostname)
-            if (res.numeric_host !== undefined) {
-                //console.log(res.host + " on IP address: " + res.numeric_host)
-                self.debug(res.host + ' on IP address: ' + res.numeric_host)
-                self.config.host = res.numeric_host
-                if (self.config.host !== undefined) {
-                    self.udp = new udp(self.config.host, self.config.port)
-                    self.udp.send(INIT)
-                    self.sendBuf = HIGHNONE
-                    self.status(self.STATE_OK)
-                    clearTimeout(self.tallyConnectTimeout)
-                    self.udp.on('error', function(err) {
-                        self.debug('Network error', err)
-                        self.status(self.STATE_ERROR, err)
-                        self.log('error', 'Network error: ' + err.message)
-                    })
-
-                    // If we get data, thing should be good
-                    self.udp.on('data', function() {
+    if (self.config.control !== 'Cloud') {
+        (async() => {
+            if (self.config.manualip === '0.0.0.0') {
+                self.debug("Auto IP mode.")
+                let res = await ping.promise.probe(self.config.hostname)
+                if (res.numeric_host !== undefined) {
+                    //console.log(res.host + " on IP address: " + res.numeric_host)
+                    self.debug(res.host + ' on IP address: ' + res.numeric_host)
+                    self.config.host = res.numeric_host
+                    if (self.config.host !== undefined) {
+                        self.udp = new udp(self.config.host, self.config.port)
+                        self.udp.send(INIT)
+                        self.sendBuf = HIGHNONE
                         self.status(self.STATE_OK)
-                    })
+                        clearTimeout(self.tallyConnectTimeout)
+                        self.udp.on('error', function(err) {
+                            self.debug('Network error', err)
+                            self.status(self.STATE_ERROR, err)
+                            self.log('error', 'Network error: ' + err.message)
+                        })
 
-                    self.udp.on('status_change', function(status, message) {
-                        self.status(status, message)
-                    })
+                        // If we get data, thing should be good
+                        self.udp.on('data', function() {
+                            self.status(self.STATE_OK)
+                        })
+
+                        self.udp.on('status_change', function(status, message) {
+                            self.status(status, message)
+                        })
+                    }
+                    //console.log(self.config.host);
                 }
-                //console.log(self.config.host);
-            }
-            if (self.config.host !== undefined) {
-                let cmd = 'http://' + self.config.host + '/' + self.config.funnyMode
-                self.sendHttp(cmd)
-                cmd = 'http://' + self.config.host + '/' + self.config.brightness
-                self.sendHttp(cmd)
-                cmd = 'http://' + self.config.host + '/' + self.config.opOnlyMode
-                self.sendHttp(cmd)
-            }
-            if (self.config.host !== undefined) {
-                self.tallyUpdateTimer = setInterval(function() {
-                    self.updateTallyInfo()
-                }, self.config.pooltime)
-                self.status(self.STATE_OK, 'Connected')
-            }
-            if (self.config.host === undefined) {
-                self.debug('Tally not found.')
-                setTimeout(function() {
-                    self.searchAndConnect()
-                }, 5000)
-            }
-        } else {
-            self.debug("Manual IP mode.");
-            self.config.host = self.config.manualip;
-            self.udp = new udp(self.config.host, self.config.port)
-            self.udp.send(INIT)
-            self.sendBuf = HIGHNONE
-            self.status(self.STATE_OK)
-            clearTimeout(self.tallyConnectTimeout)
-            self.udp.on('error', function(err) {
-                self.debug('Network error', err)
-                self.status(self.STATE_ERROR, err)
-                self.log('error', 'Network error: ' + err.message)
-            })
-
-            // If we get data, thing should be good
-            self.udp.on('data', function() {
+                if (self.config.host !== undefined) {
+                    let cmd = 'http://' + self.config.host + '/' + self.config.funnyMode
+                    self.sendHttp(cmd)
+                    cmd = 'http://' + self.config.host + '/' + self.config.brightness
+                    self.sendHttp(cmd)
+                    cmd = 'http://' + self.config.host + '/' + self.config.opOnlyMode
+                    self.sendHttp(cmd)
+                }
+                if (self.config.host !== undefined) {
+                    if (self.config.control == 'Companion') {
+                        self.tallyUpdateTimer = setInterval(function() {
+                            self.updateTallyInfo()
+                        }, self.config.pooltime)
+                    }
+                    self.status(self.STATE_OK, 'Connected')
+                }
+                if (self.config.host === undefined) {
+                    self.debug('Tally not found.')
+                    setTimeout(function() {
+                        self.searchAndConnect()
+                    }, 5000)
+                }
+            } else {
+                self.debug("Manual IP mode.")
+                self.config.host = self.config.manualip
+                self.udp = new udp(self.config.host, self.config.port)
+                self.udp.send(INIT)
+                self.sendBuf = HIGHNONE
                 self.status(self.STATE_OK)
-            })
+                clearTimeout(self.tallyConnectTimeout)
+                self.udp.on('error', function(err) {
+                    self.debug('Network error', err)
+                    self.status(self.STATE_ERROR, err)
+                    self.log('error', 'Network error: ' + err.message)
+                })
 
-            self.udp.on('status_change', function(status, message) {
-                self.status(status, message)
-            })
-            if (self.config.host !== undefined) {
-                let cmd = 'http://' + self.config.host + '/' + self.config.funnyMode
-                self.sendHttp(cmd)
-                cmd = 'http://' + self.config.host + '/' + self.config.brightness
-                self.sendHttp(cmd)
-                cmd = 'http://' + self.config.host + '/' + self.config.opOnlyMode
-                self.sendHttp(cmd)
+                // If we get data, thing should be good
+                self.udp.on('data', function() {
+                    self.status(self.STATE_OK)
+                })
+
+                self.udp.on('status_change', function(status, message) {
+                    self.status(status, message)
+                })
+                if (self.config.host !== undefined) {
+                    let cmd = 'http://' + self.config.host + '/' + self.config.funnyMode
+                    self.sendHttp(cmd)
+                    cmd = 'http://' + self.config.host + '/' + self.config.brightness
+                    self.sendHttp(cmd)
+                    cmd = 'http://' + self.config.host + '/' + self.config.opOnlyMode
+                    self.sendHttp(cmd)
+                }
+                if (self.config.host !== undefined) {
+                    if (self.config.control == 'Companion') {
+                        self.tallyUpdateTimer = setInterval(function() {
+                            self.updateTallyInfo()
+                        }, self.config.pooltime)
+                    }
+                    self.status(self.STATE_OK, 'Connected')
+                }
+                if (self.config.host === undefined) {
+                    self.debug('Tally not found.')
+                    setTimeout(function() {
+                        self.searchAndConnect()
+                    }, 5000)
+                }
             }
-            if (self.config.host !== undefined) {
-                self.tallyUpdateTimer = setInterval(function() {
-                    self.updateTallyInfo()
-                }, self.config.pooltime)
-                self.status(self.STATE_OK, 'Connected')
-            }
-            if (self.config.host === undefined) {
-                self.debug('Tally not found.')
-                setTimeout(function() {
-                    self.searchAndConnect()
-                }, 5000)
-            }
-        }
-    })()
+        })()
+    }
 }
 
 instance.prototype.updateConfig = function(config) {
@@ -164,12 +174,22 @@ instance.prototype.updateConfig = function(config) {
         delete self.socket
     }
 
+    if (self.mqttClient.connected == true) {
+        self.mqttClient.end()
+            //delete self.mqttClient
+    }
     self.config = config
 
     clearInterval(self.tallyUpdateTimer)
     if (self.config.tallynumber !== undefined) {
-        self.init_udp()
-        self.init_presets()
+        if (self.config.control == 'Companion') {
+            self.init_udp()
+            self.init_presets()
+        }
+        if (self.config.control == 'Cloud') {
+            self.initMqtt()
+            self.init_presets()
+        }
     }
 }
 
@@ -185,18 +205,35 @@ instance.prototype.sendHttp = function(cmd) {
     })
 }
 
-instance.prototype.init = function() {
+instance.prototype.destroyMqtt = function() {
     var self = this
-
-    self.debug()
-    self.log()
-    self.init_feedbacks()
-    self.config.prot = 'udp' //MANUALLY FORCED
-
-    if (self.config.tallynumber !== undefined) {
-        self.init_udp()
-        self.init_presets()
+    if (self.mqttClient !== undefined) {
+        self.debug("Clean up: MQTT client exists.")
+        if (self.mqttClient.connected) {
+            self.publishMessage(self.config.cloudmac.toUpperCase(), "10")
+            self.debug("Clean up: MQTT client is connected. Disconnection started!")
+            self.mqttClient.end()
+            self.debug("Clean up: MQTT client is disconnected from server.")
+        }
+        delete self.mqttClient
+        self.debug("Clean up: MQTT client gone..")
     }
+}
+
+instance.prototype.destroy = function() {
+    var self = this
+    clearInterval(self.tallyUpdateTimer)
+
+    if (self.udp !== undefined) {
+        self.udp.destroy()
+        delete self.udp
+    }
+
+    if (self.socket !== undefined) {
+        self.socket.destroy()
+        delete self.socket
+    }
+    self.destroyMqtt()
 }
 
 instance.prototype.init_udp = function() {
@@ -218,6 +255,77 @@ instance.prototype.init_udp = function() {
     }
 }
 
+instance.prototype.initMqtt = function() {
+    var self = this
+
+    self.destroyMqtt()
+
+    self.mqttClient = mqtt.connect({
+        host: "jnsl.asuscomm.com",
+        port: 18069,
+        clientId: 'CMPNSRV_' + Math.random().toString(16).substr(2, 8),
+        keepalive: 60,
+        clean: true,
+        queueQoSZero: false
+    });
+    self.mqttClient.on('connect', () => {
+        self.status(self.STATUS_OK)
+        self.publishMessage(self.config.cloudmac.toUpperCase(), "10")
+    })
+
+    self.mqttClient.on('error', (error) => {
+        self.status(self.STATUS_ERROR, error.toString())
+        self.log('error', error.toString())
+        self.mqttClient.end()
+    })
+
+    self.mqttClient.on('offline', () => {
+        self.status(self.STATUS_WARNING, 'Offline')
+    })
+
+    self.mqttClient.on('message', (topic, message) => {
+        try {
+            if (topic) {
+                self.handleMqttMessage(topic, message ? message.toString() : '')
+            }
+        } catch (e) {
+            self.log('error', `Handle message faaailed: ${e.toString()}`)
+        }
+    })
+}
+
+instance.prototype.init = function() {
+    var self = this
+
+    self.debug()
+    self.log()
+    self.init_feedbacks()
+    self.config.prot = 'udp' //MANUALLY FORCED
+
+    if (self.config.tallynumber !== undefined) {
+        if (self.config.control == 'Companion') {
+            self.init_udp()
+            self.init_presets()
+        }
+        if (self.config.control == 'Cloud') {
+            self.initMqtt()
+            self.init_presets()
+        }
+    }
+}
+
+instance.prototype.publishMessage = function(topic, payload) {
+    var self = this
+        //self.debug('Sending MQTT message', [topic, payload])
+    self.mqttClient.publish(topic, payload, { qos: 0, retain: true })
+}
+instance.prototype.handleMqttMessage = function(topic, message) {
+    this.debug('MQTT message received:', {
+        topic: topic,
+        message: message,
+    })
+}
+
 // Return config fields for web config
 instance.prototype.config_fields = function() {
     var self = this
@@ -235,12 +343,22 @@ instance.prototype.config_fields = function() {
 						<br>
 						Guidelines:
 						<ul>
+                            <li><strong>Local mode: </strong></li>
 							<li>Input the tally number that you wish to connect to. </li>
                             <li>Set the refresh rate. (100 ms recomended)</li>
                             <li>If you wish to auto detect your Tally IP: leave the manual ip box at 0.0.0.0 .Otherwise specify your Tally IP address.</li>
                             <li>If you want to switch from manual IP to auto IP: delete the manual IP address or input 0.0.0.0 </li>
 							<li>Choose who controls the tally. If "other" is selected (provided tally server for Atem/Vmix/OBS/Tricaster/General usage or any third party software) only auxiliar functions like call or setting color modes will work through Companion.</li>
 							<li>Choose any other option you want to default on your tally.</li>
+                            <li><strong>Cloud mode: </strong></li>
+                            <li>Write Tally number, input your tally MAC address and do not input any IP address. </li>
+                            <li>Select "Cloud" on "Controlled by Companion or other server?"</li>
+                            <li>Enable Cloud Mode on tally (on the Tally webpage - http://tally01.local)
+                            <li>Press "Save". Tally should now display a purple and red color, meaning it's listening for cloud data.</li>
+                            <li><strong>Notes on cloud tally:</strong></li>
+                            <li>Only PGM, PRV, DARK, STR and REC colors are available on cloud mode. Other color settings available directly on Tally options (check Tally webpage for listing).</li>
+                            <li>STR and REC are colored red on tally while on cloud mode./li>
+                            <li>Call function available</li>
 						</ul>
 					</div>
 				</div>
@@ -250,7 +368,7 @@ instance.prototype.config_fields = function() {
             type: 'textinput',
             id: 'tallynumber',
             label: 'Tally Number',
-            width: 2,
+            width: 1,
             default: 0,
             regex: self.REGEX_NUMBER,
         },
@@ -258,7 +376,7 @@ instance.prototype.config_fields = function() {
             type: 'textinput',
             id: 'pooltime',
             label: 'Refresh rate (ms)',
-            width: 2,
+            width: 1,
             default: 100,
             regex: self.REGEX_NUMBER,
         },
@@ -280,13 +398,23 @@ instance.prototype.config_fields = function() {
             regex: self.REGEX_IP,
         },
         {
+            type: 'textinput',
+            id: 'cloudmac',
+            label: 'Tally mac address for cloud control',
+            default: '',
+            width: 6,
+            value: self.config.cloudmac,
+        },
+        {
             type: 'dropdown',
             id: 'control',
             label: 'Controlled by Companion or other server?',
             default: 'Companion',
+            width: 4,
             choices: [
                 { id: 'Companion', label: 'Companion' },
                 { id: 'Other', label: 'Other' },
+                { id: 'Cloud', label: 'Cloud' },
             ],
         },
         {
@@ -294,6 +422,7 @@ instance.prototype.config_fields = function() {
             id: 'opOnlyMode',
             label: 'Tally LED Mode',
             default: 'OPONLYOFF',
+            width: 4,
             choices: [
                 { id: 'OPONLYOFF', label: 'Full LED' },
                 { id: 'OPONLY', label: 'Operator Only' },
@@ -305,6 +434,7 @@ instance.prototype.config_fields = function() {
             id: 'funnyMode',
             label: 'Funny PGM mode?',
             default: 'NORMAL',
+            width: 4,
             choices: [
                 { id: 'NORMAL', label: 'Normal' },
                 { id: 'FUNNY', label: 'Funny PGM' },
@@ -316,6 +446,7 @@ instance.prototype.config_fields = function() {
             id: 'brightness',
             label: 'Tally brightness level',
             default: 'HIGH',
+            width: 4,
             choices: [
                 { id: 'HIGH', label: 'HIGH' },
                 { id: 'MEDIUM', label: 'MEDIUM' },
@@ -326,17 +457,7 @@ instance.prototype.config_fields = function() {
 }
 
 // When module gets deleted
-instance.prototype.destroy = function() {
-    var self = this
-    clearInterval(self.tallyUpdateTimer)
-    self.udp.destroy()
 
-    if (self.socket !== undefined) {
-        self.socket.destroy()
-    }
-
-    self.debug('destroy', self.id)
-}
 
 instance.prototype.CHOICES_COLOR = [
     { id: 'HIGHNONE', label: 'DARK' },
@@ -738,26 +859,41 @@ instance.prototype.action = function(action) {
             if (action.options.color === 'HIGHRED') {
                 self.sendBuf = HIGHRED
                 self.states = 'PGM'
+                if (self.config.control === 'Cloud') {
+                    self.cloudMsg = "1"
+                }
                 self.checkFeedbacks()
             }
             if (action.options.color === 'HIGHGREEN') {
                 self.sendBuf = HIGHGREEN
                 self.states = 'PRV'
+                if (self.config.control === 'Cloud') {
+                    self.cloudMsg = "2"
+                }
                 self.checkFeedbacks()
             }
             if (action.options.color === 'HIGHNONE') {
                 self.sendBuf = HIGHNONE
                 self.states = 'DARK'
+                if (self.config.control === 'Cloud') {
+                    self.cloudMsg = "0"
+                }
                 self.checkFeedbacks()
             }
             if (action.options.color === 'LOWSTR') {
                 self.sendBuf = LOWSTR
                 self.states = 'LOWSTR'
+                if (self.config.control === 'Cloud') {
+                    self.cloudMsg = "4"
+                }
                 self.checkFeedbacks()
             }
             if (action.options.color === 'LOWREC') {
                 self.sendBuf = LOWREC
                 self.states = 'LOWREC'
+                if (self.config.control === 'Cloud') {
+                    self.cloudMsg = "3"
+                }
                 self.checkFeedbacks()
             }
             break
@@ -801,46 +937,60 @@ instance.prototype.action = function(action) {
             self.checkFeedbacks()
             break
         case 'operatorcall':
-            let temphex2 = action.options.opcolor.toString(16)
-            while (temphex2.length !== 6) {
-                temphex2 = '0' + temphex2
+            if (self.config.control !== 'Cloud') {
+                let temphex2 = action.options.opcolor.toString(16)
+                while (temphex2.length !== 6) {
+                    temphex2 = '0' + temphex2
+                }
+                let cmd = 'http://' + self.config.host + '/OPCOLOR?HEX=' + temphex2
+                let cmd2 = 'http://' + self.config.host + '/OPCOLOR?HEX=000000'
+                self.sendHttp(cmd)
+                setTimeout(function() {
+                    self.sendHttp(cmd2)
+                }, 100)
+                setTimeout(function() {
+                    self.sendHttp(cmd)
+                }, 200)
+                setTimeout(function() {
+                    self.sendHttp(cmd2)
+                }, 400)
+                setTimeout(function() {
+                    self.sendHttp(cmd)
+                }, 500)
+                setTimeout(function() {
+                    self.sendHttp(cmd2)
+                }, 600)
+                setTimeout(function() {
+                    self.sendHttp(cmd)
+                }, 700)
+                setTimeout(function() {
+                    self.sendHttp(cmd2)
+                }, 800)
+                setTimeout(function() {
+                    self.sendHttp(cmd)
+                }, 900)
+                setTimeout(function() {
+                    self.sendHttp(cmd2)
+                }, 1000)
             }
-            let cmd = 'http://' + self.config.host + '/OPCOLOR?HEX=' + temphex2
-            let cmd2 = 'http://' + self.config.host + '/OPCOLOR?HEX=000000'
-            self.sendHttp(cmd)
-            setTimeout(function() {
-                self.sendHttp(cmd2)
-            }, 100)
-            setTimeout(function() {
-                self.sendHttp(cmd)
-            }, 200)
-            setTimeout(function() {
-                self.sendHttp(cmd2)
-            }, 400)
-            setTimeout(function() {
-                self.sendHttp(cmd)
-            }, 500)
-            setTimeout(function() {
-                self.sendHttp(cmd2)
-            }, 600)
-            setTimeout(function() {
-                self.sendHttp(cmd)
-            }, 700)
-            setTimeout(function() {
-                self.sendHttp(cmd2)
-            }, 800)
-            setTimeout(function() {
-                self.sendHttp(cmd)
-            }, 900)
-            setTimeout(function() {
-                self.sendHttp(cmd2)
-            }, 1000)
+            if (self.config.control === 'Cloud') {
+                self.cloudMsg = "9"
+            }
             break
 
         case 'changetallymode':
             let cmd3 = 'http://' + self.config.host + '/' + action.options.tallymode
             self.sendHttp(cmd3)
             break
+    }
+    if (self.config.control == 'Cloud') {
+        try {
+            self.mqttClient.publish(self.config.cloudmac.toUpperCase(), self.cloudMsg)
+        } catch (err) {
+            if (err.message === 'Not running') {
+                console.log('Not running: ', err)
+            }
+        }
     }
 }
 
