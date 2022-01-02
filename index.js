@@ -32,7 +32,6 @@ function instance(system, id, config) {
     return self
 }
 
-
 instance.prototype.updateTallyInfo = function() {
     var self = this
     if (self.config.control === 'Companion') {
@@ -56,10 +55,10 @@ instance.prototype.searchAndConnect = function() {
     if (self.config.manualip === '') {
         self.config.manualip = '0.0.0.0'
     }
-    if (self.config.control !== 'Cloud') {
+    if (self.config.control !== 'Cloud') {;
         (async() => {
             if (self.config.manualip === '0.0.0.0') {
-                self.debug("Auto IP mode.")
+                self.debug('Auto IP mode.')
                 let res = await ping.promise.probe(self.config.hostname)
                 if (res.numeric_host !== undefined) {
                     //console.log(res.host + " on IP address: " + res.numeric_host)
@@ -111,7 +110,7 @@ instance.prototype.searchAndConnect = function() {
                     }, 5000)
                 }
             } else {
-                self.debug("Manual IP mode.")
+                self.debug('Manual IP mode.')
                 self.config.host = self.config.manualip
                 self.udp = new udp(self.config.host, self.config.port)
                 self.udp.send(INIT)
@@ -163,7 +162,6 @@ instance.prototype.updateConfig = function(config) {
     var self = this
     self.init_presets()
 
-
     if (self.udp !== undefined) {
         self.udp.destroy()
         delete self.udp
@@ -208,15 +206,15 @@ instance.prototype.sendHttp = function(cmd) {
 instance.prototype.destroyMqtt = function() {
     var self = this
     if (self.mqttClient !== undefined) {
-        self.debug("Clean up: MQTT client exists.")
+        self.debug('Clean up: MQTT client exists.')
         if (self.mqttClient.connected) {
-            self.publishMessage(self.config.cloudmac.toUpperCase(), "10")
-            self.debug("Clean up: MQTT client is connected. Disconnection started!")
+            self.publishMessage(self.config.cloudmac.toUpperCase(), '10')
+            self.debug('Clean up: MQTT client is connected. Disconnection started!')
             self.mqttClient.end()
-            self.debug("Clean up: MQTT client is disconnected from server.")
+            self.debug('Clean up: MQTT client is disconnected from server.')
         }
         delete self.mqttClient
-        self.debug("Clean up: MQTT client gone..")
+        self.debug('Clean up: MQTT client gone..')
     }
 }
 
@@ -261,16 +259,16 @@ instance.prototype.initMqtt = function() {
     self.destroyMqtt()
 
     self.mqttClient = mqtt.connect({
-        host: "jnsl.asuscomm.com",
+        host: 'jnsl.asuscomm.com',
         port: 18069,
         clientId: 'CMPNSRV_' + Math.random().toString(16).substr(2, 8),
         keepalive: 60,
         clean: true,
-        queueQoSZero: false
-    });
+        queueQoSZero: false,
+    })
     self.mqttClient.on('connect', () => {
         self.status(self.STATUS_OK)
-        self.publishMessage(self.config.cloudmac.toUpperCase(), "10")
+        self.publishMessage(self.config.cloudmac.toUpperCase(), '10')
     })
 
     self.mqttClient.on('error', (error) => {
@@ -457,7 +455,6 @@ instance.prototype.config_fields = function() {
 }
 
 // When module gets deleted
-
 
 instance.prototype.CHOICES_COLOR = [
     { id: 'HIGHNONE', label: 'DARK' },
@@ -860,7 +857,7 @@ instance.prototype.action = function(action) {
                 self.sendBuf = HIGHRED
                 self.states = 'PGM'
                 if (self.config.control === 'Cloud') {
-                    self.cloudMsg = "1"
+                    self.cloudMsg = '1'
                 }
                 self.checkFeedbacks()
             }
@@ -868,7 +865,7 @@ instance.prototype.action = function(action) {
                 self.sendBuf = HIGHGREEN
                 self.states = 'PRV'
                 if (self.config.control === 'Cloud') {
-                    self.cloudMsg = "2"
+                    self.cloudMsg = '2'
                 }
                 self.checkFeedbacks()
             }
@@ -876,7 +873,7 @@ instance.prototype.action = function(action) {
                 self.sendBuf = HIGHNONE
                 self.states = 'DARK'
                 if (self.config.control === 'Cloud') {
-                    self.cloudMsg = "0"
+                    self.cloudMsg = '0'
                 }
                 self.checkFeedbacks()
             }
@@ -884,7 +881,7 @@ instance.prototype.action = function(action) {
                 self.sendBuf = LOWSTR
                 self.states = 'LOWSTR'
                 if (self.config.control === 'Cloud') {
-                    self.cloudMsg = "4"
+                    self.cloudMsg = '4'
                 }
                 self.checkFeedbacks()
             }
@@ -892,7 +889,7 @@ instance.prototype.action = function(action) {
                 self.sendBuf = LOWREC
                 self.states = 'LOWREC'
                 if (self.config.control === 'Cloud') {
-                    self.cloudMsg = "3"
+                    self.cloudMsg = '3'
                 }
                 self.checkFeedbacks()
             }
@@ -974,7 +971,7 @@ instance.prototype.action = function(action) {
                 }, 1000)
             }
             if (self.config.control === 'Cloud') {
-                self.cloudMsg = "9"
+                self.cloudMsg = '9'
             }
             break
 
