@@ -180,7 +180,7 @@ instance.prototype.updateConfig = function(config) {
 
     clearInterval(self.tallyUpdateTimer)
     if (self.config.tallynumber !== undefined) {
-        if (self.config.control == 'Companion') {
+        if (self.config.control == 'Companion' || self.config.control == 'Other') {
             self.init_udp()
             self.init_presets()
         }
@@ -301,7 +301,7 @@ instance.prototype.init = function() {
     self.config.prot = 'udp' //MANUALLY FORCED
 
     if (self.config.tallynumber !== undefined) {
-        if (self.config.control == 'Companion') {
+        if (self.config.control == 'Companion' || self.config.control == 'Other') {
             self.init_udp()
             self.init_presets()
         }
