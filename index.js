@@ -29,6 +29,7 @@ function instance(system, id, config) {
     self.sendBuf = INIT
     self.cloudMsg = INIT
     self.mqttClient = INIT
+    self.holdMode = INIT
     return self
 }
 
@@ -474,6 +475,8 @@ instance.prototype.CHOICES_MODE = [
     { id: 'HIGH', label: 'High Brightness' },
     { id: 'MEDIUM', label: 'Medium Brightness' },
     { id: 'LOW', label: 'Low Brightness' },
+    { id: 'HOLDDATA', label: 'Hold Server Data' },
+    { id: 'UNHOLDDATA', label: 'Resume Server Data' },
     { id: 'resetallsettings', label: '--CAUTION-- Reset ALL Tally Data' },
 ]
 
@@ -617,6 +620,22 @@ instance.prototype.init_presets = function() {
                 style: {
                     color: self.rgb(255, 255, 255),
                     bgcolor: self.rgb(255, 0, 255),
+                },
+            }, ],
+        }, {
+            category: 'Functions',
+            label: 'HTTP Custom Color',
+            bank: {
+                style: 'text',
+                text: 'Tally ' + self.config.tallynumber + ' HTTP CUSTOM',
+                size: '14',
+                color: '16777215',
+                bgcolor: self.rgb(0, 0, 0),
+            },
+            actions: [{
+                action: 'sendcustomcolorhttp',
+                options: {
+                    color: self.rgb(255, 0, 255),
                 },
             }, ],
         },
@@ -783,6 +802,52 @@ instance.prototype.init_presets = function() {
             }, ],
         }, {
             category: 'Functions',
+            label: 'Hold Server Data',
+            bank: {
+                style: 'text',
+                text: 'Tally ' + self.config.tallynumber + ' Hold Server Data',
+                size: '14',
+                color: '16777215',
+                bgcolor: self.rgb(0, 0, 0),
+            },
+            actions: [{
+                action: 'changetallymode',
+                options: {
+                    tallymode: 'HOLDDATA',
+                },
+            }, ],
+            feedbacks: [{
+                type: 'HOLDDATA',
+                style: {
+                    color: self.rgb(255, 255, 255),
+                    bgcolor: self.rgb(255, 0, 0),
+                },
+            }, ],
+        }, {
+            category: 'Functions',
+            label: 'Resume Server Data',
+            bank: {
+                style: 'text',
+                text: 'Tally ' + self.config.tallynumber + ' Resume Server Data',
+                size: '14',
+                color: '16777215',
+                bgcolor: self.rgb(0, 0, 0),
+            },
+            actions: [{
+                action: 'changetallymode',
+                options: {
+                    tallymode: 'UNHOLDDATA',
+                },
+            }, ],
+            feedbacks: [{
+                type: 'UNHOLDDATA',
+                style: {
+                    color: self.rgb(255, 255, 255),
+                    bgcolor: self.rgb(0, 255, 0),
+                },
+            }, ],
+        }, {
+            category: 'Functions',
             label: '--CAUTION-- Reset ALL Tally Data',
             bank: {
                 style: 'text',
@@ -823,6 +888,15 @@ instance.prototype.actions = function(system) {
                 type: 'colorpicker',
                 id: 'color',
                 label: 'Custom Tally Color:',
+                default: self.rgb(255, 0, 0),
+            }, ],
+        },
+        sendcustomcolorhttp: {
+            label: 'Send HTTP Custom Tally Color',
+            options: [{
+                type: 'colorpicker',
+                id: 'color',
+                label: 'Custom HTTP Tally Color:',
                 default: self.rgb(255, 0, 0),
             }, ],
         },
@@ -974,10 +1048,28 @@ instance.prototype.action = function(action) {
                 self.cloudMsg = '9'
             }
             break
+        case 'sendcustomcolorhttp':
+            let temphex3 = action.options.color.toString(16)
+            while (temphex3.length !== 6) {
+                temphex3 = '0' + temphex3
+            }
+            let cmd4 = 'http://' + self.config.host + '/COLOR?HEX=' + temphex3
+            self.sendHttp(cmd4)
+            self.states = 'CUSTOMCOLORHTTP'
+            self.checkFeedbacks()
+            break
 
         case 'changetallymode':
             let cmd3 = 'http://' + self.config.host + '/' + action.options.tallymode
+            if (action.options.tallymode == 'HOLDDATA') {
+                self.holdMode = 1
+            }
+            if (action.options.tallymode == 'UNHOLDDATA') {
+                self.holdMode = 0
+            }
             self.sendHttp(cmd3)
+            self.states = 'CHANGETALLYMODE'
+            self.checkFeedbacks()
             break
     }
     if (self.config.control == 'Cloud') {
@@ -1055,6 +1147,26 @@ instance.prototype.init_feedbacks = function() {
             bgcolor: self.rgb(0, 0, 0),
         },
     }
+    feedbacks['HOLDDATA'] = {
+        type: 'boolean', // Add this
+        label: 'Hold Data Enabled',
+        description: 'Returns if the tally is ignoring Server Data',
+        style: {
+            // Move the values from options to here
+            color: self.rgb(255, 255, 255),
+            bgcolor: self.rgb(255, 0, 0),
+        },
+    }
+    feedbacks['UNHOLDDATA'] = {
+        type: 'boolean', // Add this
+        label: 'Hold Data Disabled',
+        description: 'Returns if the tally is using Server Data',
+        style: {
+            // Move the values from options to here
+            color: self.rgb(255, 255, 255),
+            bgcolor: self.rgb(0, 255, 0),
+        },
+    }
     self.setFeedbackDefinitions(feedbacks)
 }
 
@@ -1091,6 +1203,18 @@ instance.prototype.feedback = function(feedback) {
     }
     if (feedback.type === 'LOWREC') {
         if (self.sendBuf === LOWREC) {
+            return true
+        }
+        return false
+    }
+    if (feedback.type === 'HOLDDATA') {
+        if (self.holdMode === 1) {
+            return true
+        }
+        return false
+    }
+    if (feedback.type === 'UNHOLDDATA') {
+        if (self.holdMode === 0) {
             return true
         }
         return false

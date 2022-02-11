@@ -1,6 +1,6 @@
 {
     "name": "tallyma-wirelesstally",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "api": "1.0.0",
     "description": "Module to control the Tally-MA Wireless Tally",
     "keywords": [
