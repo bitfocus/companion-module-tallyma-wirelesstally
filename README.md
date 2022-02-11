@@ -32,6 +32,7 @@ https://github.com/bitfocus/companion-module-tallyma-wirelesstally/issues
 * Reset Tally Config
 * Presets for quicker and easier setup of your layout in Companion
 * Cloud mode for out-of-LAN worldwide tallying with no router configuration (only in Tally Version 2.2.7 ->)
+* Added ability to temporarily hold or resume data from the TallyServer app so that companion can send HTTP colors to the tally (only in Tally Version 2.2.7->)
 
 Check out www.tally-ma.com
 See [HELP.md](./HELP.md) and [LICENSE](./LICENSE)
