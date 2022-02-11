@@ -1,4 +1,4 @@
-//1.0.4
+//1.0.5
 var udp = require('../../udp')
 var instance_skel = require('../../instance_skel')
 var ping = require('ping')
