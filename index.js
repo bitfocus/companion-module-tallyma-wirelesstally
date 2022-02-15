@@ -475,8 +475,8 @@ instance.prototype.CHOICES_MODE = [
     { id: 'HIGH', label: 'High Brightness' },
     { id: 'MEDIUM', label: 'Medium Brightness' },
     { id: 'LOW', label: 'Low Brightness' },
-    { id: 'HOLDDATA', label: 'Hold Server Data' },
-    { id: 'UNHOLDDATA', label: 'Resume Server Data' },
+    { id: 'HOLDDATA?H=1', label: 'Hold Server Data' },
+    { id: 'HOLDDATA?H=0', label: 'Resume Server Data' },
     { id: 'resetallsettings', label: '--CAUTION-- Reset ALL Tally Data' },
 ]
 
@@ -813,7 +813,7 @@ instance.prototype.init_presets = function() {
             actions: [{
                 action: 'changetallymode',
                 options: {
-                    tallymode: 'HOLDDATA',
+                    tallymode: 'HOLDDATA?H=1',
                 },
             }, ],
             feedbacks: [{
@@ -836,7 +836,7 @@ instance.prototype.init_presets = function() {
             actions: [{
                 action: 'changetallymode',
                 options: {
-                    tallymode: 'UNHOLDDATA',
+                    tallymode: 'HOLDDATA?H=0',
                 },
             }, ],
             feedbacks: [{
@@ -1061,10 +1061,10 @@ instance.prototype.action = function(action) {
 
         case 'changetallymode':
             let cmd3 = 'http://' + self.config.host + '/' + action.options.tallymode
-            if (action.options.tallymode == 'HOLDDATA') {
+            if (action.options.tallymode == 'HOLDDATA?H=1') {
                 self.holdMode = 1
             }
-            if (action.options.tallymode == 'UNHOLDDATA') {
+            if (action.options.tallymode == 'HOLDDATA?H=0') {
                 self.holdMode = 0
             }
             self.sendHttp(cmd3)
